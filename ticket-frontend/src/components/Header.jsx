@@ -1,7 +1,7 @@
 import React from 'react';
 import { useWeb3 } from '../contexts/Web3Context';
 
-export const Navbar = ({ setPage }) => {
+export const Header = () => {
   const { account, connectWallet } = useWeb3();
 
   return (
@@ -13,16 +13,9 @@ export const Navbar = ({ setPage }) => {
               onClick={() => setPage('home')} 
               className="text-2xl font-bold cursor-pointer bg-clip-text text-transparent bg-gradient-to-r from-purple-400 to-indigo-500"
             >
-              TicketChain
+              MintPass
             </h1>
-            <div className="hidden md:block ml-10 space-x-4">
-              <button onClick={() => setPage('home')} className="text-gray-300 hover:bg-gray-700 hover:text-white px-3 py-2 rounded-md text-sm font-medium">
-                Events
-              </button>
-              <button onClick={() => setPage('create')} className="text-gray-300 hover:bg-gray-700 hover:text-white px-3 py-2 rounded-md text-sm font-medium">
-                Create Event
-              </button>
-            </div>
+            
           </div>
           <div>
             {account ? (
