@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
+import { BrowserRouter as Router, Routes, Route, useNavigate, BrowserRouter } from 'react-router-dom';
 import { useWeb3 } from './contexts/Web3Context';
-import { Navbar } from './components/Navbar';
+import { Header } from './components/Header';
 import { EventList } from './components/EventList';
 import { CreateEventForm } from './components/CreateEventForm';
 
@@ -22,8 +23,8 @@ function App() {
       );
     }
     
-    // If wallet is connected, show the selected page
-    switch (page) {
+
+    switch (page) { 
       case 'home':
         return <EventList />;
       case 'create':
@@ -37,10 +38,14 @@ function App() {
     <div className="bg-gray-900 min-h-screen text-white font-sans">
       <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-br from-purple-900/20 via-transparent to-indigo-900/20 z-0"></div>
       <div className="relative z-10">
-        <Navbar setPage={setPage} />
+        <Header />
         <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
           {renderContent()}
         </main>
+
+        <Routes>
+          <Route path= '/event-list' element=''/>
+        </Routes>
         {/* We can add a Footer component here later if we want */}
       </div>
     </div>
