@@ -1,7 +1,6 @@
 import contractABI from './TicketMaster.json';
 
-// You need to replace this placeholder with your actual address
-export const contractAddress = "0x6a7E0976312444f497bC2A5ebA899Be48A61136A";
 
+export const contractAddress = "0xA01D3e1D82d780a2DA13c5433537Dd66d1D153c6";
 // This line reads the ABI from the other file
 export const abi = contractABI.abi;

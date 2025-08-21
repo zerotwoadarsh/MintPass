@@ -1,98 +1,97 @@
+
 import React, { useState, useEffect, createContext, useContext } from 'react';
 import { ethers } from 'ethers';
+import toast from 'react-hot-toast';
 import { contractAddress, abi } from '../constants';
 
-// 1. Create the context
-const Web3Context = createContext();
+// Helper object for network-specific details
+const networkConfig = {
+    '0xaa36a7': { // Sepolia Chain ID
+        blockExplorerUrl: 'https://sepolia.etherscan.io',
+    },
+    // You can add other networks here, e.g., Fuji, Amoy
+};
 
-// 2. Create a custom hook for easy access to the context
+const Web3Context = createContext();
 export const useWeb3 = () => useContext(Web3Context);
 
-// 3. Create the Provider component
 export const Web3Provider = ({ children }) => {
     const [account, setAccount] = useState(null);
-    const [provider, setProvider] = useState(null);
+    const [provider, setProvider]= useState(null);
     const [contract, setContract] = useState(null);
     const [isLoading, setIsLoading] = useState(true);
+    const [blockExplorerUrl, setBlockExplorerUrl] = useState('');
 
-    // Function to connect the user's wallet
     const connectWallet = async () => {
         try {
-            if (!window.ethereum) return alert("Please install MetaMask to use this dApp.");
+            if (!window.ethereum) return toast.error("Please install MetaMask.");
 
             const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
             
             if (accounts.length) {
                 setAccount(accounts[0]);
-                // Setup ethers provider and contract instance after connecting
                 const ethersProvider = new ethers.BrowserProvider(window.ethereum);
                 const signer = await ethersProvider.getSigner();
                 const contractInstance = new ethers.Contract(contractAddress, abi, signer);
                 
                 setProvider(ethersProvider);
                 setContract(contractInstance);
+
+                // Set block explorer URL based on network
+                const network = await ethersProvider.getNetwork();
+                const chainId = `0x${network.chainId.toString(16)}`;
+                setBlockExplorerUrl(networkConfig[chainId]?.blockExplorerUrl || '');
+
+                toast.success('Wallet connected!');
             }
         } catch (error) {
             console.error("Error connecting wallet:", error);
-            alert("Failed to connect wallet. See the console for more details.");
+            toast.error("Failed to connect wallet.");
         }
     };
 
-    // Effect to check for an already connected wallet on page load
     useEffect(() => {
-        const checkIfWalletIsConnected = async () => {
+        const setupProvider = async () => {
             try {
                 if (!window.ethereum) {
-                    console.log("MetaMask is not installed.");
                     setIsLoading(false);
                     return;
                 }
-
                 const accounts = await window.ethereum.request({ method: 'eth_accounts' });
-
                 if (accounts.length) {
                     setAccount(accounts[0]);
                     const ethersProvider = new ethers.BrowserProvider(window.ethereum);
                     const signer = await ethersProvider.getSigner();
                     const contractInstance = new ethers.Contract(contractAddress, abi, signer);
-
                     setProvider(ethersProvider);
                     setContract(contractInstance);
-                } else {
-                    console.log("No authorized account found.");
+
+                    const network = await ethersProvider.getNetwork();
+                    const chainId = `0x${network.chainId.toString(16)}`;
+                    setBlockExplorerUrl(networkConfig[chainId]?.blockExplorerUrl || '');
                 }
             } catch (error) {
-                console.error("Error checking for connected wallet:", error);
+                console.error("Error setting up provider:", error);
             } finally {
                 setIsLoading(false);
             }
         };
+        setupProvider();
 
-        checkIfWalletIsConnected();
-
-        // Listen for account changes (e.g., user switches accounts in MetaMask)
         window.ethereum?.on('accountsChanged', (accounts) => {
             if (accounts.length > 0) {
-                // Re-run the connection logic with the new account
                 connectWallet();
             } else {
-                // User disconnected
                 setAccount(null);
                 setProvider(null);
                 setContract(null);
+                setBlockExplorerUrl('');
+                toast('Wallet disconnected.', { icon: '👋' });
             }
         });
-
     }, []);
 
-    // The value provided to all children components
-    const value = {
-        account,
-        provider,
-        contract,
-        isLoading,
-        connectWallet
-    };
+    const value = { account, provider, contract, isLoading, connectWallet, blockExplorerUrl };
 
     return (
         <Web3Context.Provider value={value}>
