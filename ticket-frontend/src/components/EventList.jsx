@@ -1,6 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useWeb3 } from '../contexts/Web3Context';
 import { EventCard } from './EventCard';
+import { SkeletonCard } from './SkeletonCard'; // Import the new SkeletonCard
 import { ethers } from 'ethers';
 
 export const EventList = () => {
@@ -8,56 +9,69 @@ export const EventList = () => {
     const [events, setEvents] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
 
-    useEffect(() => {
-        const fetchEvents = async () => {
-            if (!contract) return;
+    const fetchEvents = useCallback(async () => {
+        if (!contract) return;
 
-            try {
-                // We need a way to get the total number of events. Let's assume our contract has a function `getEventCount()`.
-                // NOTE: Our current contract is missing this. We will add it in the next step.
-                // For now, we will use a placeholder.
-                const eventCount = 1; // Placeholder
-                
-                const fetchedEvents = [];
-                // Let's assume event IDs start from 1.
-                for (let i = 1; i <= eventCount; i++) {
-                    const eventData = await contract.eventInfo(i);
-                    // The contract returns a struct as an array-like object. We map it to a JS object.
-                    fetchedEvents.push({
-                        id: Number(eventData.eventId),
-                        name: eventData.name,
-                        price: ethers.formatEther(eventData.ticketPrice),
-                        totalSupply: Number(eventData.totalSupply),
-                        ticketsSold: Number(eventData.ticketsSold),
-                    });
-                }
-                setEvents(fetchedEvents);
-            } catch (error) {
-                console.error("Error fetching events:", error);
-                // This might fail if the contract doesn't have `getEventCount` yet. That's okay for now.
-            } finally {
-                setIsLoading(false);
+        setIsLoading(true);
+        try {
+            const eventCount = await contract.getEventCount();
+            const totalEvents = Number(eventCount);
+            
+            const fetchedEvents = [];
+            for (let i = 1; i <= totalEvents; i++) {
+                const eventData = await contract.eventInfo(i);
+                fetchedEvents.push({
+                    id: Number(eventData.eventId),
+                    name: eventData.name,
+                    price: ethers.formatEther(eventData.ticketPrice),
+                    totalSupply: Number(eventData.totalSupply),
+                    ticketsSold: Number(eventData.ticketsSold),
+                });
             }
-        };
-
-        fetchEvents();
+            setEvents(fetchedEvents.reverse());
+        } catch (error) {
+            console.error("Error fetching events:", error);
+        } finally {
+            setIsLoading(false);
+        }
     }, [contract]);
 
-    if (isLoading) {
-        return <p className="text-center text-purple-300 animate-pulse">Loading events from the blockchain...</p>;
-    }
+    useEffect(() => {
+        fetchEvents();
+    }, [fetchEvents]);
+
+    // This is the new loading state UI
+    const renderSkeletons = () => (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+            {/* Create an array of 6 items to map over for the skeleton display */}
+            {[...Array(6)].map((_, index) => (
+                <SkeletonCard key={index} />
+            ))}
+        </div>
+    );
 
     return (
-        <div>
-            <h2 className="text-3xl font-bold text-center mb-10 text-white">Upcoming Events</h2>
-            {events.length > 0 ? (
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+            <div className="flex justify-between items-center mb-10">
+                <h2 className="text-3xl font-bold text-black">Upcoming Events</h2>
+                <button onClick={fetchEvents} className="text-purple-300 hover:text-white transition p-2 rounded-full hover:bg-gray-700">
+                    <svg xmlns="[http://www.w3.org/2000/svg](http://www.w3.org/2000/svg)" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h5M20 20v-5h-5M20 4h-5v5M4 20h5v-5" /></svg>
+                </button>
+            </div>
+
+            {isLoading ? (
+                renderSkeletons()
+            ) : events.length > 0 ? (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
                     {events.map(event => (
-                        <EventCard key={event.id} event={event} />
+                        <EventCard key={event.id} event={event} onTicketBought={fetchEvents} />
                     ))}
                 </div>
             ) : (
-                <p className="text-center text-gray-500">No events found. Be the first to create one!</p>
+                <div className="text-center py-16 px-6 bg-gray-800/30 rounded-lg">
+                    <h3 className="text-xl font-semibold text-white">No Events Found</h3>
+                    <p className="text-gray-400 mt-2">Be the first to create an event on MintPass!</p>
+                </div>
             )}
         </div>
     );
